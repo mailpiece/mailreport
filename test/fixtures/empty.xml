@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<feedback>
+  <report_metadata>
+    <org_name>receiver.example</org_name>
+    <email>dmarc@receiver.example</email>
+    <report_id>2</report_id>
+    <date_range>
+      <begin>1785196800</begin>
+      <end>1785283199</end>
+    </date_range>
+  </report_metadata>
+  <policy_published>
+    <domain>example.com</domain>
+    <p>reject</p>
+  </policy_published>
+</feedback>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<feedback>
+  <report_metadata>
+    <org_name>Smith &amp; Jones &lt;mail&gt;</org_name>
+    <email>dmarc@receiver.example</email>
+    <report_id>3</report_id>
+    <date_range><begin>1785196800</begin><end>1785283199</end></date_range>
+  </report_metadata>
+  <policy_published><domain>caf&#233;.example</domain><p>none</p></policy_published>
+</feedback>

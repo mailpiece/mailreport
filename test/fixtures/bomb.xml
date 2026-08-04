@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!DOCTYPE feedback [
+ <!ENTITY a "aaaaaaaaaa">
+ <!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">
+ <!ENTITY c "&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;">
+ <!ENTITY d "&c;&c;&c;&c;&c;&c;&c;&c;&c;&c;">
+ <!ENTITY e "&d;&d;&d;&d;&d;&d;&d;&d;&d;&d;">
+]>
+<feedback>
+  <report_metadata><org_name>&e;</org_name></report_metadata>
+  <policy_published><domain>example.com</domain><p>none</p></policy_published>
+</feedback>
