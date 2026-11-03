@@ -7,6 +7,7 @@
 - Read counts and timestamps in base ten and refuse ones longer than 18 digits
 - Refuse a TLS-RPT datetime longer than 40 characters
 - Return nil rather than raise on a Zip64 offset too large to seek to
+- Refuse a TLS-RPT report of more than 25,000 objects and arrays
 
 ## 0.5.0
 

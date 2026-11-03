@@ -8,6 +8,9 @@ module MailReport
   module TlsRpt
     REPORT_NAME = /\.json\z/i
 
+    # Objects and arrays bound as well as size, as DMARC bounds tags.
+    MAX_OBJECTS = 25_000
+
     # Base ten and under 2**63, as DMARC's; a bignum takes seconds to print.
     NUMBER = /\A\d{1,18}\z/
     MAX_COUNT = 10**18 - 1
@@ -46,7 +49,7 @@ module MailReport
         json = Archive.open(bytes, name: REPORT_NAME)&.force_encoding(Encoding::UTF_8)
 
         # A report is JSON, and JSON is UTF-8 (RFC 8460 §3, RFC 8259 §8.1).
-        document = JSON.parse(json) if json&.valid_encoding?
+        document = JSON.parse(json) if json&.valid_encoding? && countable?(json)
 
         report_from(document) if document.is_a?(Hash)
       rescue JSON::ParserError
@@ -54,6 +57,11 @@ module MailReport
       end
 
       private
+        # Over-counts brackets in strings, which refuses in the direction we want.
+        def countable?(json)
+          json.count("{[") <= MAX_OBJECTS
+        end
+
         def report_from(document)
           window = hash_at(document, "date-range")
 

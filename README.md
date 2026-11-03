@@ -132,6 +132,7 @@ MailReport::Archive.open(bytes, max_size: 1024 * 1024)
 ```
 
 - **A document of more than 25,000 tags and escapes is refused**, however few bytes it spends on them. Each costs time and memory to read whatever its size, so the count is bounded to about 500 to 1,000 records.
+- **A TLS report of more than 25,000 objects and arrays is refused**, for the same reason.
 - **External references are never resolved** - no document reads a file, a URL, or a DNS name.
 - **A zip entry is bounded as it inflates**, not on the size it claims.
 
