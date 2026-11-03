@@ -132,6 +132,14 @@ class MailReport::TlsRptTest < MailReport::TestCase
     assert_equal 0, report.policies.first.successes
   end
 
+  def test_a_count_is_read_in_base_ten
+    summary = { "total-successful-session-count" => "010", "total-failure-session-count" => "0x10" }
+    reported = parsing(policies: policy("summary" => summary)).policies.first
+
+    assert_equal 10, reported.successes
+    assert_equal 0, reported.failures
+  end
+
   # "The sender saw no sessions" is a finding; "the sender did not say" is not.
   def test_a_count_the_sender_omitted_is_not_a_count_of_zero
     omitted = parsing(policies: policy("summary" => {}))

@@ -69,6 +69,12 @@ class MailReport::DmarcTest < MailReport::TestCase
     assert_equal 0, counting("1.5").records.first.count
   end
 
+  def test_a_count_is_read_in_base_ten
+    assert_equal 10, counting("010").records.first.count
+    assert_equal 0, counting("0x10").records.first.count
+    assert_equal 0, counting("1_000").records.first.count
+  end
+
   # "The sender saw no messages" is a finding; "the sender did not say" is not.
   def test_a_count_the_sender_omitted_is_not_a_count_of_zero
     omitted = parsing("<record><row><source_ip>203.0.113.9</source_ip></row></record>")

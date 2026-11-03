@@ -19,6 +19,13 @@ class MailReport::HostileInputTest < MailReport::TestCase
     assert_nil MailReport::Dmarc.parse(fixture("external_entity.xml"))
   end
 
+  def test_a_document_redefining_a_predefined_entity_is_refused
+    redefined = %(<!DOCTYPE feedback [<!ENTITY lt "#{"A" * 1_000}">]><feedback><report_metadata>) +
+      %(<org_name>&lt;</org_name></report_metadata></feedback>)
+
+    assert_nil MailReport::Dmarc.parse(redefined)
+  end
+
   def test_the_escapes_a_legitimate_report_uses_still_read
     report = MailReport::Dmarc.parse(fixture("escaped.xml"))
 
@@ -163,9 +170,70 @@ class MailReport::HostileInputTest < MailReport::TestCase
     assert_nil MailReport::Dmarc.parse(dense)
   end
 
+  # Each escape costs the parser about as much as a tag.
+  def test_a_document_of_more_escapes_than_a_report_holds_is_refused
+    dense = "<feedback><x>#{"&amp;" * MailReport::Dmarc::Document::MAX_TAGS}</x></feedback>"
+
+    assert_nil MailReport::Dmarc.parse(dense)
+  end
+
+  # A bignum parses quickly but costs seconds to print later.
+  def test_a_number_too_long_for_a_report_is_refused
+    dmarc = MailReport::Dmarc.parse(<<~XML)
+      <feedback>
+        <report_metadata><date_range><begin>1</begin><end>#{"9" * 25}</end></date_range></report_metadata>
+        <record><row><count>#{"9" * 19}</count></row></record>
+      </feedback>
+    XML
+    tls = MailReport::TlsRpt.parse(%({"policies": [{"summary": {"total-successful-session-count": #{"9" * 19}}}]}))
+
+    assert_nil dmarc.range
+    assert_equal 0, dmarc.records.first.count
+    assert_equal 0, tls.policies.first.successes
+  end
+
+  def test_a_datetime_too_long_for_a_report_is_refused
+    report = MailReport::TlsRpt.parse(%({"date-range": {"start-datetime": "2026-01-01T00:00:00.#{"1" * 1_000}Z"}}))
+
+    assert_nil report.started_at
+  end
+
+  def test_a_json_report_of_more_objects_than_a_report_holds_is_refused
+    dense = %({"policies": [#{([ "{}" ] * MailReport::TlsRpt::MAX_OBJECTS).join(",")}]})
+
+    assert_nil MailReport::TlsRpt.parse(dense)
+  end
+
+  def test_a_json_field_that_is_not_text_reads_as_nil
+    report = MailReport::TlsRpt.parse(JSON.generate(
+      "organization-name" => { "a" => [ 1, 2 ] }, "report-id" => 12,
+      "policies" => [ { "policy" => { "policy-domain" => { "$ne" => 1 }, "mx-host" => [ 1, "mx.example" ] },
+        "failure-details" => [ { "receiving-ip" => [ "203.0.113.1" ] } ] } ]
+    ))
+    policy = report.policies.first
+
+    assert_nil report.organization
+    assert_nil report.report_id
+    assert_nil policy.domain
+    assert_equal [ "mx.example" ], policy.mx_hosts
+    assert_nil policy.failure_details.first.receiving_ip
+  end
+
   # The ceiling is only worth having if it clears a real report by a distance.
   def test_the_ceiling_leaves_room_for_more_records_than_a_sender_reports
-    assert_operator with_records(300).count("<"), :<, MailReport::Dmarc::Document::MAX_TAGS
+    assert_operator with_records(300).count("<&"), :<, MailReport::Dmarc::Document::MAX_TAGS
+  end
+
+  def test_a_zip64_offset_past_what_a_seek_reaches_yields_no_report
+    assert_nil MailReport::Archive.open(zip64_directory_at(2**63 + 5))
+  end
+
+  # Each local header read costs up to 128 KB, so read only the chosen entry's.
+  def test_only_the_chosen_entrys_local_header_is_read
+    archive = zipped(fixture("aggregate.xml"), beside: "README.txt").b
+    archive[2, 2] = "XX"
+
+    assert_equal "google.com", MailReport::Dmarc.parse(archive).organization
   end
 
   # Hold the whole archive to the ceiling, not only its entries.
@@ -225,6 +293,19 @@ class MailReport::HostileInputTest < MailReport::TestCase
       StringIO.new.binmode.tap { |buffer|
         ZipKit::Streamer.open(buffer) { |zip| zip.write_stored_file(name) { |sink| sink << content } }
       }.string
+    end
+
+    # Rewrite the end record as Zip64's, which carries a 64-bit directory offset.
+    def zip64_directory_at(offset)
+      archive = stored("x")
+      archive = archive.byteslice(0, archive.rindex("PK\x05\x06".b))
+      directory = archive.index("PK\x01\x02".b)
+      record = archive.bytesize
+
+      archive +
+        [ 0x06064b50, 44, 45, 45, 0, 0, 1, 1, record - directory, offset ].pack("VQ<vvVVQ<Q<Q<Q<") +
+        [ 0x07064b50, 0, record, 1 ].pack("VVQ<V") +
+        [ 0x06054b50, 0, 0, 0xFFFF, 0xFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0 ].pack("VvvvvVVv")
     end
 
     def allocated
