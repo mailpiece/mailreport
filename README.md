@@ -124,7 +124,7 @@ This is deliberately different from a report carrying no records - that one is a
 
 A `rua` address is published in DNS, so anyone can send anything to it, and the limits assume as much:
 
-- **Entity declarations are refused.** A report has none of its own, so the expansion bomb is refused with them. Escapes a real document needs (`&amp;`, `&#233;`) still read.
+- **Entity declarations are refused**, predefined names included. A report has none of its own, so the expansion bomb is refused with them. Escapes a real document needs (`&amp;`, `&#233;`) still read.
 - **Decompression stops at 2 MB** rather than running to completion.
 
 ```ruby

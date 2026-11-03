@@ -19,6 +19,13 @@ class MailReport::HostileInputTest < MailReport::TestCase
     assert_nil MailReport::Dmarc.parse(fixture("external_entity.xml"))
   end
 
+  def test_a_document_redefining_a_predefined_entity_is_refused
+    redefined = %(<!DOCTYPE feedback [<!ENTITY lt "#{"A" * 1_000}">]><feedback><report_metadata>) +
+      %(<org_name>&lt;</org_name></report_metadata></feedback>)
+
+    assert_nil MailReport::Dmarc.parse(redefined)
+  end
+
   def test_the_escapes_a_legitimate_report_uses_still_read
     report = MailReport::Dmarc.parse(fixture("escaped.xml"))
 

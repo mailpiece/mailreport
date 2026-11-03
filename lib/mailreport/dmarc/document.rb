@@ -8,8 +8,6 @@ module MailReport
     class Document
       ROOT = "feedback"
 
-      PREDEFINED_ENTITIES = %w[ lt gt amp quot apos ].freeze
-
       # Tag count bound as well as size; room for ~500 records.
       MAX_TAGS = 25_000
 
@@ -48,13 +46,10 @@ module MailReport
           @xml.to_s.count("<") <= MAX_TAGS
         end
 
-        # Refuse any declared entity before text is read (expansion timing).
+        # Refuse any internal subset before text is read: REXML lists the
+        # predefined entities as declared, so redefining `lt` hid among them.
         def readable?(document)
-          declared_entities(document).empty?
-        end
-
-        def declared_entities(document)
-          document.doctype&.entities&.keys.to_a - PREDEFINED_ENTITIES
+          document.doctype.nil? || document.doctype.children.empty?
         end
 
         def build(root)
