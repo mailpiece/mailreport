@@ -66,9 +66,9 @@ module MailReport
           window = hash_at(document, "date-range")
 
           Report.new(
-            organization: document["organization-name"],
-            report_id: document["report-id"],
-            contact: document["contact-info"],
+            organization: string_at(document, "organization-name"),
+            report_id: string_at(document, "report-id"),
+            contact: string_at(document, "contact-info"),
             started_at: time_at(window["start-datetime"]),
             ended_at: time_at(window["end-datetime"]),
             policies: array_at(document, "policies").filter_map { |entry| policy_from(entry) }
@@ -80,10 +80,10 @@ module MailReport
             policy, summary = hash_at(entry, "policy"), hash_at(entry, "summary")
 
             Policy.new(
-              type: policy["policy-type"],
-              domain: policy["policy-domain"],
-              mx_hosts: listed(policy["mx-host"]),
-              policy_string: listed(policy["policy-string"]),
+              type: string_at(policy, "policy-type"),
+              domain: string_at(policy, "policy-domain"),
+              mx_hosts: strings_at(policy, "mx-host"),
+              policy_string: strings_at(policy, "policy-string"),
               successes: count_at(summary, "total-successful-session-count"),
               failures: count_at(summary, "total-failure-session-count"),
               failure_details: array_at(entry, "failure-details").filter_map { |failure| failure_from(failure) }
@@ -94,14 +94,14 @@ module MailReport
         def failure_from(entry)
           if entry.is_a?(Hash)
             Failure.new(
-              result_type: entry["result-type"],
+              result_type: string_at(entry, "result-type"),
               count: count_at(entry, "failed-session-count"),
-              sending_mta_ip: entry["sending-mta-ip"],
-              receiving_mx_hostname: entry["receiving-mx-hostname"],
-              receiving_mx_helo: entry["receiving-mx-helo"],
-              receiving_ip: entry["receiving-ip"],
-              additional_information: entry["additional-information"],
-              failure_reason_code: entry["failure-reason-code"]
+              sending_mta_ip: string_at(entry, "sending-mta-ip"),
+              receiving_mx_hostname: string_at(entry, "receiving-mx-hostname"),
+              receiving_mx_helo: string_at(entry, "receiving-mx-helo"),
+              receiving_ip: string_at(entry, "receiving-ip"),
+              additional_information: string_at(entry, "additional-information"),
+              failure_reason_code: string_at(entry, "failure-reason-code")
             )
           end
         end
@@ -121,6 +121,15 @@ module MailReport
 
         def array_at(document, key)
           listed(document[key])
+        end
+
+        # Text or nil: a caller storing or querying by a field expects no structure.
+        def string_at(document, key)
+          document[key] if document[key].is_a?(String)
+        end
+
+        def strings_at(document, key)
+          array_at(document, key).grep(String)
         end
 
         # Omitted count is nil, not zero — only the sender can report "none".

@@ -204,6 +204,21 @@ class MailReport::HostileInputTest < MailReport::TestCase
     assert_nil MailReport::TlsRpt.parse(dense)
   end
 
+  def test_a_json_field_that_is_not_text_reads_as_nil
+    report = MailReport::TlsRpt.parse(JSON.generate(
+      "organization-name" => { "a" => [ 1, 2 ] }, "report-id" => 12,
+      "policies" => [ { "policy" => { "policy-domain" => { "$ne" => 1 }, "mx-host" => [ 1, "mx.example" ] },
+        "failure-details" => [ { "receiving-ip" => [ "203.0.113.1" ] } ] } ]
+    ))
+    policy = report.policies.first
+
+    assert_nil report.organization
+    assert_nil report.report_id
+    assert_nil policy.domain
+    assert_equal [ "mx.example" ], policy.mx_hosts
+    assert_nil policy.failure_details.first.receiving_ip
+  end
+
   # The ceiling is only worth having if it clears a real report by a distance.
   def test_the_ceiling_leaves_room_for_more_records_than_a_sender_reports
     assert_operator with_records(300).count("<&"), :<, MailReport::Dmarc::Document::MAX_TAGS
