@@ -9,6 +9,7 @@
 - Return nil rather than raise on a Zip64 offset too large to seek to
 - Refuse a TLS-RPT report of more than 25,000 objects and arrays
 - Read a TLS-RPT field that is not a string as nil
+- Read only the chosen zip entry's local header
 
 ## 0.5.0
 

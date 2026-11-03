@@ -228,6 +228,14 @@ class MailReport::HostileInputTest < MailReport::TestCase
     assert_nil MailReport::Archive.open(zip64_directory_at(2**63 + 5))
   end
 
+  # Each local header read costs up to 128 KB, so read only the chosen entry's.
+  def test_only_the_chosen_entrys_local_header_is_read
+    archive = zipped(fixture("aggregate.xml"), beside: "README.txt").b
+    archive[2, 2] = "XX"
+
+    assert_equal "google.com", MailReport::Dmarc.parse(archive).organization
+  end
+
   # Hold the whole archive to the ceiling, not only its entries.
   def test_an_archive_over_the_ceiling_is_refused_though_its_entries_would_fit
     assert_nil MailReport::Archive.open(zipped("x", beside: "README.txt"), max_size: 100)

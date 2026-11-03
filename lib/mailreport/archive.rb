@@ -62,14 +62,15 @@ module MailReport
           archive = StringIO.new(bytes)
 
           if entry = document_entry(archive, name)
-            archive.seek(entry.compressed_data_offset)
+            archive.seek(compressed_data_offset(entry, archive))
             content(entry, archive, max_size)
           end
         end
 
-        # Prefer a name match when given; else first non-empty file.
+        # Prefer a name match when given; else first non-empty file. Local
+        # headers cost up to 128 KB each to read, so only the chosen one is.
         def document_entry(archive, name)
-          entries = ZipKit::FileReader.read_zip_structure(io: archive).select do |entry|
+          entries = ZipKit::FileReader.read_zip_structure(io: archive, read_local_headers: false).select do |entry|
             !entry.filename.end_with?("/") && entry.uncompressed_size.positive?
           end
 
@@ -78,6 +79,10 @@ module MailReport
           else
             entries.first
           end
+        end
+
+        def compressed_data_offset(entry, archive)
+          ZipKit::FileReader.new.get_compressed_data_offset(io: archive, local_file_header_offset: entry.local_file_header_offset)
         end
 
         def content(entry, archive, max_size)
