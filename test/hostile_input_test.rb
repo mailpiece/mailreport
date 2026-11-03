@@ -177,6 +177,27 @@ class MailReport::HostileInputTest < MailReport::TestCase
     assert_nil MailReport::Dmarc.parse(dense)
   end
 
+  # A bignum parses quickly but costs seconds to print later.
+  def test_a_number_too_long_for_a_report_is_refused
+    dmarc = MailReport::Dmarc.parse(<<~XML)
+      <feedback>
+        <report_metadata><date_range><begin>1</begin><end>#{"9" * 25}</end></date_range></report_metadata>
+        <record><row><count>#{"9" * 19}</count></row></record>
+      </feedback>
+    XML
+    tls = MailReport::TlsRpt.parse(%({"policies": [{"summary": {"total-successful-session-count": #{"9" * 19}}}]}))
+
+    assert_nil dmarc.range
+    assert_equal 0, dmarc.records.first.count
+    assert_equal 0, tls.policies.first.successes
+  end
+
+  def test_a_datetime_too_long_for_a_report_is_refused
+    report = MailReport::TlsRpt.parse(%({"date-range": {"start-datetime": "2026-01-01T00:00:00.#{"1" * 1_000}Z"}}))
+
+    assert_nil report.started_at
+  end
+
   # The ceiling is only worth having if it clears a real report by a distance.
   def test_the_ceiling_leaves_room_for_more_records_than_a_sender_reports
     assert_operator with_records(300).count("<&"), :<, MailReport::Dmarc::Document::MAX_TAGS

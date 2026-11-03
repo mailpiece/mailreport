@@ -8,6 +8,13 @@ module MailReport
   module TlsRpt
     REPORT_NAME = /\.json\z/i
 
+    # Base ten and under 2**63, as DMARC's; a bignum takes seconds to print.
+    NUMBER = /\A\d{1,18}\z/
+    MAX_COUNT = 10**18 - 1
+
+    # Room for nanoseconds and an offset; a long fraction takes seconds to inspect.
+    MAX_DATETIME = 40
+
     # §4.4.
     Failure = Data.define(:result_type, :count, :sending_mta_ip, :receiving_mx_hostname,
       :receiving_mx_helo, :receiving_ip, :additional_information, :failure_reason_code) do
@@ -114,17 +121,14 @@ module MailReport
         end
 
         def counted(given)
-          value = given.is_a?(Integer) ? given : Integer(given.to_s, exception: false)
-
-          if value && !value.negative?
-            value
-          else
-            0
-          end
+          case given
+          when Integer then given if given.between?(0, MAX_COUNT)
+          when String then Integer(given, 10) if given.match?(NUMBER)
+          end || 0
         end
 
         def time_at(value)
-          Time.iso8601(value.to_s)
+          Time.iso8601(value) if value.is_a?(String) && value.length <= MAX_DATETIME
         rescue ArgumentError
           nil
         end

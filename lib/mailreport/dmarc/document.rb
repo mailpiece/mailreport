@@ -11,6 +11,10 @@ module MailReport
       # Tags and escapes bound as well as size; room for 500 to 1,000 records.
       MAX_TAGS = 25_000
 
+      # Base ten and under 2**63: `Integer` reads "010" as octal, and a
+      # bignum is quick to parse but takes seconds to print.
+      NUMBER = /\A\d{1,18}\z/
+
       # REXML raises bare RuntimeError when expansion limits trip.
       EXPANSION_ABANDONED = /entity expansions exceeded|entity expansion has grown too large/
 
@@ -87,7 +91,7 @@ module MailReport
             aspf: text(element, "aspf"),
             p: text(element, "p"),
             sp: text(element, "sp"),
-            pct: counted(element, "pct"),
+            pct: integer(element, "pct"),
             fo: text(element, "fo")
           )
         end
@@ -166,18 +170,14 @@ module MailReport
         end
 
         def integer(element, name)
-          Integer(text(element, name), exception: false)
-        end
+          value = text(element, name)
 
-        def counted(element, name)
-          value = integer(element, name)
-
-          value unless value.nil? || value.negative?
+          Integer(value, 10) if value&.match?(NUMBER)
         end
 
         # Omitted count is nil, not zero — only the sender can report "none".
         def count_of(row)
-          counted(row, "count") || 0 if text(row, "count")
+          integer(row, "count") || 0 if text(row, "count")
         end
     end
   end
