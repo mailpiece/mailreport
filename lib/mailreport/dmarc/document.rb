@@ -8,7 +8,7 @@ module MailReport
     class Document
       ROOT = "feedback"
 
-      # Tag count bound as well as size; room for ~500 records.
+      # Tags and escapes bound as well as size; room for 500 to 1,000 records.
       MAX_TAGS = 25_000
 
       # REXML raises bare RuntimeError when expansion limits trip.
@@ -41,9 +41,10 @@ module MailReport
           end
         end
 
-        # Over-counts `<` in text/comments — refuses in the direction we want.
+        # Counts `<` and `&`, each about as costly to parse; over-counts
+        # in comments, which refuses in the direction we want.
         def countable?
-          @xml.to_s.count("<") <= MAX_TAGS
+          @xml.to_s.count("<&") <= MAX_TAGS
         end
 
         # Refuse any internal subset before text is read: REXML lists the

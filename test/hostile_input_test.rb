@@ -170,9 +170,16 @@ class MailReport::HostileInputTest < MailReport::TestCase
     assert_nil MailReport::Dmarc.parse(dense)
   end
 
+  # Each escape costs the parser about as much as a tag.
+  def test_a_document_of_more_escapes_than_a_report_holds_is_refused
+    dense = "<feedback><x>#{"&amp;" * MailReport::Dmarc::Document::MAX_TAGS}</x></feedback>"
+
+    assert_nil MailReport::Dmarc.parse(dense)
+  end
+
   # The ceiling is only worth having if it clears a real report by a distance.
   def test_the_ceiling_leaves_room_for_more_records_than_a_sender_reports
-    assert_operator with_records(300).count("<"), :<, MailReport::Dmarc::Document::MAX_TAGS
+    assert_operator with_records(300).count("<&"), :<, MailReport::Dmarc::Document::MAX_TAGS
   end
 
   # Hold the whole archive to the ceiling, not only its entries.

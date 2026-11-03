@@ -131,7 +131,7 @@ A `rua` address is published in DNS, so anyone can send anything to it, and the 
 MailReport::Archive.open(bytes, max_size: 1024 * 1024)
 ```
 
-- **A document of more than 25,000 tags is refused**, however few bytes it spends on them. Tags cost time and memory to read whatever their size, so the count is bounded to 500 records.
+- **A document of more than 25,000 tags and escapes is refused**, however few bytes it spends on them. Each costs time and memory to read whatever its size, so the count is bounded to about 500 to 1,000 records.
 - **External references are never resolved** - no document reads a file, a URL, or a DNS name.
 - **A zip entry is bounded as it inflates**, not on the size it claims.
 
