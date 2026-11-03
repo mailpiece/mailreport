@@ -13,9 +13,11 @@ module MailReport
     CHUNK_SIZE = 64 * 1024
     STORED = 0
 
+    # RangeError: a Zip64 offset too large for a seek.
     UNREADABLE = [
       ZipKit::FileReader::ReadError, ZipKit::FileReader::MissingEOCD,
-      ZipKit::FileReader::UnsupportedFeature, Zlib::Error, Zlib::GzipFile::Error
+      ZipKit::FileReader::UnsupportedFeature, Zlib::Error, Zlib::GzipFile::Error,
+      RangeError
     ].freeze
 
     class << self

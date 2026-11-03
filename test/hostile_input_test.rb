@@ -203,6 +203,10 @@ class MailReport::HostileInputTest < MailReport::TestCase
     assert_operator with_records(300).count("<&"), :<, MailReport::Dmarc::Document::MAX_TAGS
   end
 
+  def test_a_zip64_offset_past_what_a_seek_reaches_yields_no_report
+    assert_nil MailReport::Archive.open(zip64_directory_at(2**63 + 5))
+  end
+
   # Hold the whole archive to the ceiling, not only its entries.
   def test_an_archive_over_the_ceiling_is_refused_though_its_entries_would_fit
     assert_nil MailReport::Archive.open(zipped("x", beside: "README.txt"), max_size: 100)
@@ -260,6 +264,19 @@ class MailReport::HostileInputTest < MailReport::TestCase
       StringIO.new.binmode.tap { |buffer|
         ZipKit::Streamer.open(buffer) { |zip| zip.write_stored_file(name) { |sink| sink << content } }
       }.string
+    end
+
+    # Rewrite the end record as Zip64's, which carries a 64-bit directory offset.
+    def zip64_directory_at(offset)
+      archive = stored("x")
+      archive = archive.byteslice(0, archive.rindex("PK\x05\x06".b))
+      directory = archive.index("PK\x01\x02".b)
+      record = archive.bytesize
+
+      archive +
+        [ 0x06064b50, 44, 45, 45, 0, 0, 1, 1, record - directory, offset ].pack("VQ<vvVVQ<Q<Q<Q<") +
+        [ 0x07064b50, 0, record, 1 ].pack("VVQ<V") +
+        [ 0x06054b50, 0, 0, 0xFFFF, 0xFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0 ].pack("VvvvvVVv")
     end
 
     def allocated
